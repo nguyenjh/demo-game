@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DUNGEON CRAWL</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #12121a;
+    --border: #2a2a3f;
+    --gold: #f0c040;
+    --red: #e03030;
+    --green: #30c060;
+    --blue: #4080f0;
+    --purple: #9060f0;
+    --white: #e8e8f0;
+    --dim: #7070a0;
+    --glow-gold: 0 0 8px #f0c04088;
+    --glow-red: 0 0 8px #e0303088;
+    --glow-blue: 0 0 8px #4080f088;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, #1a1030 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, #0a1828 0%, transparent 60%);
+  }
+
+  h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 3vw, 22px);
+    color: var(--gold);
+    text-shadow: var(--glow-gold), 0 0 30px #f0c04044;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-size: 18px;
+    color: var(--dim);
+    margin-bottom: 20px;
+    text-align: center;
+    letter-spacing: 3px;
+  }
+
+  .game-wrap {
+    display: grid;
+    grid-template-columns: 220px 1fr 220px;
+    grid-template-rows: auto auto;
+    gap: 10px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 14px;
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #ffffff08 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .panel-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Player Panel */
+  .player-panel { grid-column: 1; grid-row: 1 / 3; }
+
+  .char-art {
+    text-align: center;
+    font-size: 52px;
+    margin: 8px 0 12px;
+    filter: drop-shadow(0 0 10px #f0c04066);
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 5px 0;
+    font-size: 18px;
+  }
+
+  .stat-label { color: var(--dim); }
+  .stat-val { color: var(--white); }
+  .stat-gold { color: var(--gold); }
+
+  .bar-wrap {
+    background: #1a1a28;
+    height: 10px;
+    border: 1px solid var(--border);
+    margin: 4px 0 8px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    transition: width 0.5s ease;
+  }
+
+  .hp-bar { background: linear-gradient(90deg, #c02020, #e04040); }
+  .mp-bar { background: linear-gradient(90deg, #2040a0, #4080f0); }
+  .xp-bar { background: linear-gradient(90deg, #806000, #f0c040); }
+
+  /* Battle Arena */
+  .arena-panel {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arena-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, #2a2a3f22 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, #2a2a3f22 40px);
+  }
+
+  .enemy-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .enemy-art {
+    font-size: 64px;
+    animation: enemyFloat 2.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px #e0303066);
+    transition: transform 0.1s;
+  }
+
+  @keyframes enemyFloat {
+    0%, 100% { transform: translateY(0) scaleX(1); }
+    50% { transform: translateY(-5px) scaleX(-1); }
+  }
+
+  .enemy-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--red);
+    text-shadow: var(--glow-red);
+  }
+
+  .enemy-hp-wrap {
+    width: 180px;
+  }
+
+  .enemy-hp-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    color: var(--dim);
+    margin-bottom: 2px;
+  }
+
+  .battle-msg {
+    position: absolute;
+    bottom: 10px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 22px;
+    color: var(--white);
+    padding: 6px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .battle-msg.show { opacity: 1; }
+
+  /* Action Panel */
+  .action-panel {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .btn {
+    background: #1a1a28;
+    border: 1px solid var(--border);
+    color: var(--white);
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    padding: 10px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 1px;
+  }
+
+  .btn:hover:not(:disabled) {
+    border-color: var(--gold);
+    color: var(--gold);
+    box-shadow: var(--glow-gold);
+    background: #1e1a10;
+  }
+
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-attack { border-color: #5a2020; }
+  .btn-attack:hover:not(:disabled) { border-color: var(--red); color: var(--red); box-shadow: var(--glow-red); background: #1e1010; }
+  .btn-magic { border-color: #202050; }
+  .btn-magic:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); box-shadow: var(--glow-blue); background: #101020; }
+  .btn-heal { border-color: #205020; }
+  .btn-heal:hover:not(:disabled) { border-color: var(--green); color: var(--green); box-shadow: 0 0 8px #30c06088; background: #101e10; }
+
+  .btn-icon { font-size: 22px; display: block; margin-bottom: 2px; }
+  .btn-cost { font-size: 13px; color: var(--blue); }
+
+  /* Log Panel */
+  .log-panel {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    overflow: hidden;
+  }
+
+  .log-entries {
+    height: 340px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+    padding-right: 4px;
+  }
+
+  .log-entries::-webkit-scrollbar { width: 4px; }
+  .log-entries::-webkit-scrollbar-track { background: var(--bg); }
+  .log-entries::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .log-entry {
+    font-size: 15px;
+    line-height: 1.3;
+    padding: 4px 6px;
+    border-left: 2px solid var(--border);
+    animation: logIn 0.3s ease;
+  }
+
+  @keyframes logIn {
+    from { opacity: 0; transform: translateX(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .log-entry.attack { border-color: var(--red); color: #e08080; }
+  .log-entry.magic { border-color: var(--blue); color: #8080e0; }
+  .log-entry.heal { border-color: var(--green); color: #80e0a0; }
+  .log-entry.enemy { border-color: #804040; color: #c06060; }
+  .log-entry.system { border-color: var(--gold); color: var(--gold); }
+  .log-entry.loot { border-color: var(--purple); color: #c090f0; }
+
+  /* Overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: #00000099;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+
+  .overlay.hidden { display: none; }
+
+  .overlay-box {
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    padding: 36px 40px;
+    text-align: center;
+    max-width: 420px;
+    box-shadow: 0 0 40px #f0c04044;
+  }
+
+  .overlay-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    color: var(--gold);
+    text-shadow: var(--glow-gold);
+    margin-bottom: 16px;
+  }
+
+  .overlay-sub {
+    font-size: 22px;
+    color: var(--dim);
+    margin-bottom: 24px;
+    line-height: 1.4;
+  }
+
+  .overlay .btn {
+    font-size: 20px;
+    padding: 12px 28px;
+    margin: 6px;
+  }
+
+  /* Float damage text */
+  .dmg-float {
+    position: fixed;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 200;
+    animation: floatUp 1.2s ease forwards;
+  }
+
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-60px); }
+  }
+
+  .shake { animation: shake 0.35s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  /* Floor indicator */
+  .floor-badge {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--dim);
+    text-align: center;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  .floor-badge span { color: var(--gold); }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .game-wrap {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+    }
+    .player-panel { grid-column: 1; grid-row: 1; }
+    .log-panel { grid-column: 2; grid-row: 1; }
+    .arena-panel { grid-column: 1 / 3; grid-row: 2; }
+    .action-panel { grid-column: 1 / 3; grid-row: 3; }
+  }
+</style>
+</head>
+<body>
+
+<h1>⚔ DUNGEON CRAWL ⚔</h1>
+<p class="subtitle">A PIXEL RPG ADVENTURE</p>
+
+<div class="floor-badge">FLOOR <span id="floorNum">1</span> — KILL COUNT: <span id="killCount">0</span></div>
+
+<div class="game-wrap">
+
+  <!-- Player Panel -->
+  <div class="panel player-panel">
+    <div class="panel-title">▶ HERO</div>
+    <div class="char-art">🧙</div>
+    <div class="stat-row"><span class="stat-label">LVL</span><span class="stat-val" id="playerLvl">1</span></div>
+    <div class="stat-row"><span class="stat-label">HP</span><span class="stat-val"><span id="playerHpVal">100</span>/<span id="playerHpMax">100</span></span></div>
+    <div class="bar-wrap"><div class="bar-fill hp-bar" id="hpBar" style="width:100%"></div></div>
+    <div class="stat-row"><span class="stat-label">MP</span><span class="stat-val"><span id="playerMpVal">50</span>/<span id="playerMpMax">50</span></span></div>
+    <div class="bar-wrap"><div class="bar-fill mp-bar" id="mpBar" style="width:100%"></div></div>
+    <div class="stat-row"><span class="stat-label">XP</span><span class="stat-val"><span id="playerXpVal">0</span>/<span id="playerXpMax">100</span></span></div>
+    <div class="bar-wrap"><div class="bar-fill xp-bar" id="xpBar" style="width:0%"></div></div>
+    <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
+      <div class="stat-row"><span class="stat-label">ATK</span><span class="stat-val" id="playerAtk">18</span></div>
+      <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-val" id="playerDef">5</span></div>
+      <div class="stat-row"><span class="stat-label">MAGIC</span><span class="stat-val" id="playerMag">25</span></div>
+      <div class="stat-row"><span class="stat-label">GOLD</span><span class="stat-gold" id="playerGold">0</span></div>
+    </div>
+  </div>
+
+  <!-- Arena -->
+  <div class="panel arena-panel">
+    <div class="arena-bg"></div>
+    <div class="enemy-area" id="enemyArea">
+      <div class="enemy-art" id="enemyArt">💀</div>
+      <div class="enemy-name" id="enemyName">SKELETON</div>
+      <div class="enemy-hp-wrap">
+        <div class="enemy-hp-label">
+          <span>HP</span>
+          <span><span id="enemyHpVal">40</span>/<span id="enemyHpMax">40</span></span>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill hp-bar" id="enemyHpBar" style="width:100%"></div></div>
+      </div>
+    </div>
+    <div class="battle-msg" id="battleMsg"></div>
+  </div>
+
+  <!-- Actions -->
+  <div class="panel action-panel">
+    <div class="panel-title">▶ ACTIONS</div>
+    <div class="actions-grid">
+      <button class="btn btn-attack" onclick="doAction('attack')">
+        <span class="btn-icon">⚔️</span>ATTACK
+      </button>
+      <button class="btn btn-magic" onclick="doAction('magic')">
+        <span class="btn-icon">✨</span>MAGIC
+        <div class="btn-cost">Cost: 10 MP</div>
+      </button>
+      <button class="btn btn-heal" onclick="doAction('heal')">
+        <span class="btn-icon">💊</span>HEAL
+        <div class="btn-cost">Cost: 15 MP</div>
+      </button>
+      <button class="btn" onclick="doAction('flee')">
+        <span class="btn-icon">🏃</span>FLEE
+      </button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="panel log-panel">
+    <div class="panel-title">▶ BATTLE LOG</div>
+    <div class="log-entries" id="logEntries"></div>
+  </div>
+</div>
+
+<!-- Overlays -->
+<div class="overlay" id="victoryOverlay" style="display:none">
+  <div class="overlay-box">
+    <div class="overlay-title">⚔ VICTORY! ⚔</div>
+    <div class="overlay-sub" id="victoryMsg">You defeated the enemy!</div>
+    <button class="btn" onclick="nextEnemy()">NEXT ENEMY ▶</button>
+  </div>
+</div>
+
+<div class="overlay" id="levelUpOverlay" style="display:none">
+  <div class="overlay-box">
+    <div class="overlay-title">★ LEVEL UP! ★</div>
+    <div class="overlay-sub" id="levelUpMsg">You grew stronger!</div>
+    <button class="btn" onclick="closeLevelUp()">CONTINUE ▶</button>
+  </div>
+</div>
+
+<div class="overlay" id="gameOverOverlay" style="display:none">
+  <div class="overlay-box">
+    <div class="overlay-title" style="color:var(--red)">☠ GAME OVER ☠</div>
+    <div class="overlay-sub" id="gameOverMsg">You were defeated...</div>
+    <button class="btn btn-attack" onclick="resetGame()">RESTART</button>
+  </div>
+</div>
+
+<div class="overlay" id="startOverlay">
+  <div class="overlay-box">
+    <div class="overlay-title">⚔ DUNGEON CRAWL</div>
+    <div class="overlay-sub">Battle through floors of monsters, gain XP, level up, and survive as long as you can!</div>
+    <button class="btn" onclick="startGame()">▶ BEGIN ADVENTURE</button>
+  </div>
+</div>
+
+<script>
+// ====== GAME DATA ======
+const ENEMIES = [
+  { name:"SKELETON",   art:"💀", hp:40,  atk:8,  xp:20, gold:[2,8]  },
+  { name:"GOBLIN",     art:"👺", hp:55,  atk:12, xp:30, gold:[4,12] },
+  { name:"ORC",        art:"👹", hp:90,  atk:18, xp:50, gold:[8,20] },
+  { name:"VAMPIRE",    art:"🧛", hp:110, atk:22, xp:70, gold:[10,25]},
+  { name:"GOLEM",      art:"🗿", hp:150, atk:15, xp:80, gold:[12,28]},
+  { name:"DRAGON",     art:"🐉", hp:200, atk:30, xp:120,gold:[20,50]},
+  { name:"DEMON LORD", art:"😈", hp:280, atk:35, xp:180,gold:[30,80]},
+];
+
+const SPELLS = ["✨ ARCANE BLAST","🔥 FIREBALL","❄️ ICE SHARD","⚡ LIGHTNING"];
+
+// ====== PLAYER STATE ======
+let player = {};
+let enemy = {};
+let floor = 1;
+let kills = 0;
+let busy = false;
+let levelUpPending = false;
+
+function initPlayer() {
+  player = { hp:100, hpMax:100, mp:50, mpMax:50, xp:0, xpMax:100,
+    atk:18, def:5, mag:25, gold:0, lvl:1 };
+}
+
+// ====== SPAWN ENEMY ======
+function spawnEnemy() {
+  const tier = Math.min(Math.floor((floor-1)/2), ENEMIES.length-1);
+  const base = ENEMIES[Math.max(0, tier + Math.floor(Math.random()*2-0))];
+  const scale = 1 + (floor-1)*0.18;
+  enemy = {
+    name: base.name,
+    art: base.art,
+    hp: Math.round(base.hp * scale),
+    hpMax: Math.round(base.hp * scale),
+    atk: Math.round(base.atk * scale),
+    xp: Math.round(base.xp * scale),
+    goldMin: base.gold[0],
+    goldMax: base.gold[1],
+  };
+  renderEnemy();
+}
+
+// ====== ACTIONS ======
+async function doAction(type) {
+  if (busy) return;
+  busy = true;
+  setButtonsEnabled(false);
+
+  if (type === 'attack') {
+    const dmg = Math.max(1, player.atk + rand(-4,4) - Math.floor(enemy.atk*0.1));
+    dealEnemyDmg(dmg);
+    addLog(`⚔ You strike for ${dmg} damage!`, 'attack');
+    if (!checkEnemyDead()) await enemyTurn();
+
+  } else if (type === 'magic') {
+    if (player.mp < 10) { addLog("Not enough MP!", 'system'); busy=false; setButtonsEnabled(true); return; }
+    player.mp -= 10;
+    const dmg = Math.max(1, player.mag + rand(-5,10));
+    const spell = SPELLS[Math.floor(Math.random()*SPELLS.length)];
+    dealEnemyDmg(dmg);
+    addLog(`${spell}! ${dmg} magic damage!`, 'magic');
+    if (!checkEnemyDead()) await enemyTurn();
+
+  } else if (type === 'heal') {
+    if (player.mp < 15) { addLog("Not enough MP!", 'system'); busy=false; setButtonsEnabled(true); return; }
+    player.mp -= 15;
+    const amount = Math.round(player.hpMax * 0.3 + rand(0,10));
+    player.hp = Math.min(player.hpMax, player.hp + amount);
+    addLog(`💊 You heal for ${amount} HP!`, 'heal');
+    floatText(`+${amount}`, '#30c060');
+    await wait(300);
+    await enemyTurn();
+
+  } else if (type === 'flee') {
+    const success = Math.random() < 0.45;
+    if (success) {
+      addLog("🏃 You fled successfully!", 'system');
+      floor = Math.max(1, floor-1);
+      await wait(500);
+      newFloor();
+    } else {
+      addLog("🏃 Couldn't escape!", 'system');
+      await enemyTurn();
+    }
+  }
+
+  renderPlayer();
+  if (!busy) return; // died mid-turn
+  busy = false;
+  setButtonsEnabled(true);
+}
+
+function dealEnemyDmg(dmg) {
+  enemy.hp = Math.max(0, enemy.hp - dmg);
+  floatText(`-${dmg}`, '#e04040', true);
+  shakeEl('enemyArt');
+  renderEnemy();
+}
+
+async function enemyTurn() {
+  await wait(500);
+  const raw = enemy.atk + rand(-3,5);
+  const dmg = Math.max(1, raw - player.def);
+  player.hp = Math.max(0, player.hp - dmg);
+  addLog(`${enemy.art} ${enemy.name} attacks for ${dmg}!`, 'enemy');
+  floatText(`-${dmg}`, '#ff4444');
+  shakeEl('hpBar');
+  renderPlayer();
+  if (player.hp <= 0) { gameOver(); return; }
+  // MP regen
+  player.mp = Math.min(player.mpMax, player.mp + 3);
+}
+
+function checkEnemyDead() {
+  if (enemy.hp <= 0) {
+    kills++;
+    const gold = rand(enemy.goldMin, enemy.goldMax);
+    player.gold += gold;
+    const xpGain = enemy.xp;
+    player.xp += xpGain;
+    addLog(`💀 ${enemy.name} defeated! +${xpGain} XP, +${gold} Gold`, 'loot');
+    document.getElementById('killCount').textContent = kills;
+    renderPlayer();
+    // Check level up
+    let leveled = false;
+    while (player.xp >= player.xpMax) {
+      player.xp -= player.xpMax;
+      levelUp();
+      leveled = true;
+    }
+    busy = false;
+    setButtonsEnabled(true);
+    if (leveled) {
+      showLevelUp();
+    } else {
+      showVictory(gold, xpGain);
+    }
+    return true;
+  }
+  return false;
+}
+
+function levelUp() {
+  player.lvl++;
+  player.hpMax = Math.round(player.hpMax * 1.2);
+  player.hp = player.hpMax;
+  player.mpMax = Math.round(player.mpMax * 1.15);
+  player.mp = player.mpMax;
+  player.atk = Math.round(player.atk * 1.12);
+  player.mag = Math.round(player.mag * 1.15);
+  player.def = Math.round(player.def * 1.1 + 1);
+  player.xpMax = Math.round(player.xpMax * 1.5);
+  addLog(`★ LEVEL UP! Now level ${player.lvl}!`, 'system');
+}
+
+// ====== SCREENS ======
+function showVictory(gold, xp) {
+  document.getElementById('victoryMsg').innerHTML =
+    `Defeated ${enemy.art} <b>${enemy.name}</b>!<br>+${xp} XP &nbsp; +${gold} Gold<br><br>Floor ${floor} cleared!`;
+  document.getElementById('victoryOverlay').style.display = 'flex';
+}
+
+function nextEnemy() {
+  document.getElementById('victoryOverlay').style.display = 'none';
+  floor++;
+  document.getElementById('floorNum').textContent = floor;
+  newFloor();
+}
+
+function showLevelUp() {
+  document.getElementById('levelUpMsg').innerHTML =
+    `Level <b>${player.lvl}</b>!<br>All stats increased!<br>HP fully restored!`;
+  document.getElementById('levelUpOverlay').style.display = 'flex';
+}
+
+function closeLevelUp() {
+  document.getElementById('levelUpOverlay').style.display = 'none';
+  floor++;
+  document.getElementById('floorNum').textContent = floor;
+  newFloor();
+}
+
+function gameOver() {
+  busy = true;
+  setButtonsEnabled(false);
+  document.getElementById('gameOverMsg').innerHTML =
+    `Slain by ${enemy.art} ${enemy.name} on Floor ${floor}.<br>Kills: ${kills} &nbsp; Gold: ${player.gold}`;
+  setTimeout(() => {
+    document.getElementById('gameOverOverlay').style.display = 'flex';
+  }, 600);
+}
+
+function resetGame() {
+  document.getElementById('gameOverOverlay').style.display = 'none';
+  floor = 1; kills = 0;
+  document.getElementById('floorNum').textContent = 1;
+  document.getElementById('killCount').textContent = 0;
+  document.getElementById('logEntries').innerHTML = '';
+  initPlayer();
+  renderPlayer();
+  busy = false;
+  setButtonsEnabled(true);
+  newFloor();
+}
+
+function startGame() {
+  document.getElementById('startOverlay').style.display = 'none';
+  newFloor();
+}
+
+function newFloor() {
+  spawnEnemy();
+  addLog(`⚔ Floor ${floor}: ${enemy.art} ${enemy.name} appears!`, 'system');
+}
+
+// ====== RENDER ======
+function renderPlayer() {
+  document.getElementById('playerLvl').textContent = player.lvl;
+  document.getElementById('playerHpVal').textContent = player.hp;
+  document.getElementById('playerHpMax').textContent = player.hpMax;
+  document.getElementById('playerMpVal').textContent = player.mp;
+  document.getElementById('playerMpMax').textContent = player.mpMax;
+  document.getElementById('playerXpVal').textContent = player.xp;
+  document.getElementById('playerXpMax').textContent = player.xpMax;
+  document.getElementById('playerAtk').textContent = player.atk;
+  document.getElementById('playerDef').textContent = player.def;
+  document.getElementById('playerMag').textContent = player.mag;
+  document.getElementById('playerGold').textContent = player.gold;
+  document.getElementById('hpBar').style.width = (player.hp/player.hpMax*100)+'%';
+  document.getElementById('mpBar').style.width = (player.mp/player.mpMax*100)+'%';
+  document.getElementById('xpBar').style.width = (player.xp/player.xpMax*100)+'%';
+}
+
+function renderEnemy() {
+  document.getElementById('enemyArt').textContent = enemy.art;
+  document.getElementById('enemyName').textContent = enemy.name;
+  document.getElementById('enemyHpVal').textContent = enemy.hp;
+  document.getElementById('enemyHpMax').textContent = enemy.hpMax;
+  document.getElementById('enemyHpBar').style.width = (enemy.hp/enemy.hpMax*100)+'%';
+}
+
+// ====== LOG ======
+function addLog(msg, type='system') {
+  const el = document.createElement('div');
+  el.className = `log-entry ${type}`;
+  el.textContent = msg;
+  const log = document.getElementById('logEntries');
+  log.prepend(el);
+  // Trim
+  while (log.children.length > 40) log.removeChild(log.lastChild);
+}
+
+// ====== UTILS ======
+function rand(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setButtonsEnabled(on) {
+  document.querySelectorAll('.btn').forEach(b => b.disabled = !on);
+}
+
+function shakeEl(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+}
+
+function floatText(text, color, onEnemy=false) {
+  const div = document.createElement('div');
+  div.className = 'dmg-float';
+  div.textContent = text;
+  div.style.color = color;
+  const target = document.getElementById(onEnemy ? 'enemyArt' : 'hpBar');
+  const rect = target.getBoundingClientRect();
+  div.style.left = (rect.left + rect.width/2 - 20) + 'px';
+  div.style.top = (rect.top - 10) + 'px';
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 1300);
+}
+
+// ====== INIT ======
+initPlayer();
+renderPlayer();
+</script>
+</body>
+</html>
